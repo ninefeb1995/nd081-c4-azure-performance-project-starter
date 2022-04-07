@@ -146,3 +146,5 @@ az network nsg rule create \
 echo "Port 22 added to NSG: $nsgName"
 
 echo "VMSS script completed!"
+
+read -p "Press enter to continue"
