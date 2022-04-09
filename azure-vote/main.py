@@ -23,31 +23,36 @@ from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
 from opencensus.ext.flask.flask_middleware import FlaskMiddleware
 
-# Logging
-logger = logging.getLogger(__name__)
-handler = AzureLogHandler(
-    connection_string='InstrumentationKey=c05add4a-e4b2-42b3-b48c-d5d14946934d;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/')
-handler.setFormatter(logging.Formatter('%(traceId)s %(spanId)s %(message)s'))
-logger.addHandler(handler)
-logger.addHandler(AzureEventHandler(
-    connection_string='InstrumentationKey=c05add4a-e4b2-42b3-b48c-d5d14946934d;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/'))
-logger.setLevel(logging.INFO)
-
-# Metrics
+# For metrics
 stats = stats_module.stats
 view_manager = stats.view_manager
 
+# Logging
 config_integration.trace_integrations(['logging'])
 config_integration.trace_integrations(['requests'])
+logger = logging.getLogger(__name__)
+
+
+handler = AzureLogHandler(
+    connection_string='InstrumentationKey=6372c04d-2188-4d97-aa75-ea9937251934;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/')
+handler.setFormatter(logging.Formatter('%(traceId)s %(spanId)s %(message)s'))
+logger.addHandler(handler)
+
+logger.addHandler(AzureEventHandler(
+    connection_string='InstrumentationKey=6372c04d-2188-4d97-aa75-ea9937251934;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/'))
+logger.setLevel(logging.INFO)
+
+
+# Metrics
 exporter = metrics_exporter.new_metrics_exporter(
     enable_standard_metrics=True,
-    connection_string='InstrumentationKey=c05add4a-e4b2-42b3-b48c-d5d14946934d;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/')
+    connection_string='InstrumentationKey=6372c04d-2188-4d97-aa75-ea9937251934;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/')
 view_manager.register_exporter(exporter)
 
 # Tracing
 tracer = Tracer(
     exporter=AzureExporter(
-        connection_string='InstrumentationKey=c05add4a-e4b2-42b3-b48c-d5d14946934d;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/'),
+        connection_string='InstrumentationKey=6372c04d-2188-4d97-aa75-ea9937251934;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/'),
     sampler=ProbabilitySampler(1.0),
 )
 
@@ -57,7 +62,7 @@ app = Flask(__name__)
 middleware = FlaskMiddleware(
     app,
     exporter=AzureExporter(
-        connection_string="InstrumentationKey=c05add4a-e4b2-42b3-b48c-d5d14946934d;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/"),
+        connection_string="InstrumentationKey=6372c04d-2188-4d97-aa75-ea9937251934;IngestionEndpoint=https://eastasia-0.in.applicationinsights.azure.com/"),
     sampler=ProbabilitySampler(rate=1.0)
 )
 
@@ -83,7 +88,7 @@ else:
 r = redis.Redis()
 
 # Redis configurations
-redis_server = os.environ['REDIS']
+redis_server = app.config['REDIS']
 
 # Redis Connection
 try:
@@ -149,7 +154,12 @@ def index():
 
             # Get current values
             vote1 = r.get(button1).decode('utf-8')
+            properties = {'custom_dimensions': {'Cats Vote': vote1}}
+            logger.info('Cats Vote', extra=properties)
+
             vote2 = r.get(button2).decode('utf-8')
+            properties = {'custom_dimensions': {'Dogs Vote': vote2}}
+            logger.info('Dogs Vote', extra=properties)            
 
             # Return results
             return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
@@ -157,6 +167,6 @@ def index():
 
 if __name__ == "__main__":
     # comment line below when deploying to VMSS
-    # app.run() # local
+    #app.run()  # local
     # uncomment the line below before deployment to VMSS
     app.run(host='0.0.0.0', threaded=True, debug=True)  # remote
